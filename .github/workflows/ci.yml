@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 1
       - id: changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filter: |
             **/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}

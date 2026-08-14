@@ -1,0 +1,8 @@
+# VVB repo template — owner rules. Last reviewer wins per path.
+/                                    @vvb-crab-bot
+/.github/                            @vvb-crab-bot
+/scripts/                            @vvb-crab-bot
+/admin-panel/                        @vvb-crab-bot
+# Add your domain paths below. Example:
+# /api/                              @vvb-crab-bot
+# /database/                          @vvb-crab-bot

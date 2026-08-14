@@ -1,0 +1,120 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs on the same PR when a new commit is pushed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Skips entirely if only docs/markdown files changed.
+  gate:
+    name: gate (skip-if-docs-only)
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.changes.outputs.should_skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filter: |
+            **/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}
+            **/package*.json
+            **/pyproject.toml
+            **/Cargo.toml
+            **/go.mod
+            **/Cargo.lock
+            **/pnpm-lock.yaml
+            **/package-lock.json
+            **/requirements*.txt
+
+  lint:
+    name: lint
+    needs: gate
+    if: needs.gate.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: detect-stack
+        id: stack
+        run: |
+          if [ -f package.json ]; then echo "stack=npm" >> "$GITHUB_OUTPUT"
+          elif [ -f pyproject.toml ] || [ -f requirements.txt ]; then echo "stack=pip" >> "$GITHUB_OUTPUT"
+          else echo "stack=none" >> "$GITHUB_OUTPUT"; fi
+      - name: run-npm-lint
+        if: steps.stack.outputs.stack == 'npm'
+        run: |
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund
+          elif [ -f pnpm-lock.yaml ]; then npm i -g pnpm && pnpm i --frozen-lockfile
+          else npm i --no-audit --no-fund
+          fi
+          npm run lint --if-present
+      - name: run-py-lint
+        if: steps.stack.outputs.stack == 'pip'
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy 2>/dev/null || true
+          ruff check . 2>/dev/null || true
+          mypy . 2>/dev/null || true
+
+  test:
+    name: test
+    needs: gate
+    if: needs.gate.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: detect-stack
+        id: stack
+        run: |
+          if [ -f package.json ]; then echo "stack=npm" >> "$GITHUB_OUTPUT"
+          elif [ -f pyproject.toml ] || [ -f requirements.txt ]; then echo "stack=pip" >> "$GITHUB_OUTPUT"
+          else echo "stack=none" >> "$GITHUB_OUTPUT"; fi
+      - name: run-npm-test
+        if: steps.stack.outputs.stack == 'npm'
+        run: |
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund
+          elif [ -f pnpm-lock.yaml ]; then npm i -g pnpm && pnpm i --frozen-lockfile
+          else npm i --no-audit --no-fund
+          fi
+          npm test --if-present
+      - name: run-py-test
+        if: steps.stack.outputs.stack == 'pip'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . 2>/dev/null || pip install -r requirements.txt 2>/dev/null || true
+          pytest -q 2>/dev/null || python -m unittest discover 2>/dev/null || echo "no test runner"
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

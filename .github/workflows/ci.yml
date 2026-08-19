@@ -29,15 +29,16 @@ jobs:
         uses: dorny/paths-filter@v4
         with:
           filters: |
-            **/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}
-            **/package*.json
-            **/pyproject.toml
-            **/Cargo.toml
-            **/go.mod
-            **/Cargo.lock
-            **/pnpm-lock.yaml
-            **/package-lock.json
-            **/requirements*.txt
+            should_skip:
+              - '**/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}'
+              - '**/package*.json'
+              - '**/pyproject.toml'
+              - '**/Cargo.toml'
+              - '**/go.mod'
+              - '**/Cargo.lock'
+              - '**/pnpm-lock.yaml'
+              - '**/package-lock.json'
+              - '**/requirements*.txt'
 
   lint:
     name: lint

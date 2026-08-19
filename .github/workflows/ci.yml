@@ -28,7 +28,7 @@ jobs:
       - id: changes
         uses: dorny/paths-filter@v3
         with:
-          filters: |
+          filter: |
             **/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}
             **/package*.json
             **/pyproject.toml

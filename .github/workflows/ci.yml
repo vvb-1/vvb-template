@@ -26,18 +26,19 @@ jobs:
         with:
           fetch-depth: 1
       - id: changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
-          filter: |
-            **/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}
-            **/package*.json
-            **/pyproject.toml
-            **/Cargo.toml
-            **/go.mod
-            **/Cargo.lock
-            **/pnpm-lock.yaml
-            **/package-lock.json
-            **/requirements*.txt
+          filters: |
+            should_skip:
+              - '**/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}'
+              - '**/package*.json'
+              - '**/pyproject.toml'
+              - '**/Cargo.toml'
+              - '**/go.mod'
+              - '**/Cargo.lock'
+              - '**/pnpm-lock.yaml'
+              - '**/package-lock.json'
+              - '**/requirements*.txt'
 
   lint:
     name: lint
@@ -47,7 +48,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -81,7 +82,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -115,6 +116,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

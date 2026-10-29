@@ -29,7 +29,7 @@ jobs:
         with:
           fetch-depth: 1
       - name: Verify CI gate regression contracts
-        run: python3 -m unittest discover -s tests -v
+        run: python3 -m unittest discover -s tests -p test_ci_gate.py -v
       - id: changes
         if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@v4

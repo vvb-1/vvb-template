@@ -3,6 +3,9 @@
 import fnmatch
 from pathlib import Path
 import re
+import shlex
+import subprocess
+import tempfile
 import unittest
 
 
@@ -95,6 +98,24 @@ class WorkflowGateTests(unittest.TestCase):
             node_setup = self.jobs[name].split('uses: actions/setup-node@', 1)[1].split('      - ', 1)[0]
             self.assertIsNone(re.search(r'''^          cache: ['"]?npm['"]?$''', node_setup, re.MULTILINE), name)
             self.assertIsNotNone(re.search(r'^          package-manager-cache: false$', node_setup, re.MULTILINE), name)
+
+    def test_gate_runs_only_its_own_contract_before_app_dependencies(self):
+        command = re.search(
+            r'name: Verify CI gate regression contracts\n        run: (.+)', self.jobs['gate']
+        )[1]
+        with tempfile.TemporaryDirectory() as root:
+            tests = Path(root) / 'tests'
+            tests.mkdir()
+            (tests / 'test_ci_gate.py').write_text(
+                'import unittest\nclass Gate(unittest.TestCase):\n'
+                '    def test_gate(self): self.assertTrue(True)\n'
+            )
+            (tests / 'test_application.py').write_text(
+                'raise ImportError("Application dependencies are not installed yet")\n'
+            )
+            result = subprocess.run(shlex.split(command), cwd=root, capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('Ran 1 test', result.stderr)
 
 
 if __name__ == '__main__':

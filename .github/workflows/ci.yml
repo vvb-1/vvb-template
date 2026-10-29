@@ -34,20 +34,12 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@v4
         with:
+          predicate-quantifier: every
           filters: |
             code:
-              - '.github/**'
-              - 'tests/**'
-              - 'test/**'
-              - '**/*.{ts,tsx,js,jsx,py,go,rs,java,kt,rb,sh}'
-              - '**/package*.json'
-              - '**/pyproject.toml'
-              - '**/Cargo.toml'
-              - '**/go.mod'
-              - '**/Cargo.lock'
-              - '**/pnpm-lock.yaml'
-              - '**/package-lock.json'
-              - '**/requirements*.txt'
+              - '**'
+              - '!*.md'
+              - '!docs/**/*.md'
 
   lint:
     name: lint

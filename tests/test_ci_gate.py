@@ -1,6 +1,5 @@
 """Kontrollerar att kodändringar aldrig stänger av lint/test."""
 
-import fnmatch
 from pathlib import Path
 import re
 import shlex
@@ -37,18 +36,19 @@ def filter_outputs(gate, paths):
     block = gate.split('filters: |', 1)[1]
     name = re.search(r'^            (\w+):$', block, re.MULTILINE)[1]
     patterns = re.findall(r"^              - '([^']+)'$", block, re.MULTILINE)
-    expanded = []
-    for pattern in patterns:
-        braces = re.search(r'\{([^}]+)\}', pattern)
-        expanded.extend(
-            [pattern[:braces.start()] + suffix + pattern[braces.end():] for suffix in braces[1].split(',')]
-            if braces else [pattern]
-        )
-    matched = any(
-        fnmatch.fnmatchcase(path, pattern)
-        or (pattern.startswith('**/') and fnmatch.fnmatchcase(path, pattern[3:]))
-        for path in paths for pattern in expanded
-    )
+    # Bounded model for this exact filter; actual picomatch is verified separately.
+    def matches(path, pattern):
+        if pattern == '**':
+            return True
+        if pattern == '!*.md':
+            return not ('/' not in path and path.endswith('.md'))
+        if pattern == '!docs/**/*.md':
+            return not (path.startswith('docs/') and path.endswith('.md'))
+        raise ValueError('Unsupported filter contract: ' + pattern)
+
+    if 'predicate-quantifier: every' not in gate:
+        raise ValueError('The negative patterns require every-match semantics')
+    matched = any(all(matches(path, pattern) for pattern in patterns) for path in paths)
     values = {name: str(matched).lower()}
     exports = re.findall(r'^      (\w+): \$\{\{ steps\.changes\.outputs\.(\w+) \}\}', gate, re.MULTILINE)
     return {output: values.get(source, '') for output, source in exports}
@@ -71,6 +71,16 @@ class WorkflowGateTests(unittest.TestCase):
 
     def test_workflow_and_test_changes_run_checks(self):
         for path in ('.github/workflows/ci.yml', 'tests/fixture.json', 'test/example.txt'):
+            with self.subTest(path=path):
+                self.assert_jobs_run([path], True)
+
+    def test_configuration_and_unknown_non_docs_run_checks(self):
+        for path in ('tsconfig.json', 'Dockerfile', '.eslintrc.json', 'schema.sql', 'proto/service.proto'):
+            with self.subTest(path=path):
+                self.assert_jobs_run([path], True)
+
+    def test_markdown_test_fixtures_are_not_documentation_only(self):
+        for path in ('tests/case.md', 'test/fixture.md', '.github/instructions.md'):
             with self.subTest(path=path):
                 self.assert_jobs_run([path], True)
 

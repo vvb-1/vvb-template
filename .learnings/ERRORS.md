@@ -6,7 +6,9 @@ Filtret `should_skip` matchade kod, men lint/test kördes endast när filtret
 inte matchade. Därför hoppades kontrollerna över vid kodändringar.
 
 Filtret och jobb-outputen heter nu `code`. Lint/test körs när outputen är
-`true`. `.github/**`, `tests/**` och `test/**` omfattas uttryckligen.
+`true`. Alla filer omfattas utom Markdown i repo-roten och under `docs/`.
+`predicate-quantifier: every` krävs för de två negativa mönstren.
+Okända filtyper, konfiguration och även Markdown-testfixtures kör kontrollerna.
 Hemlighetsskanningen är fortfarande ovillkorlig. Gate-jobbet får endast
 `contents: read` och `pull-requests: read`, vilket paths-filter behöver för
 att läsa PR:ns ändrade filer. Inga skrivbehörigheter läggs till.
@@ -31,6 +33,12 @@ applikationstester före projektets beroendeinstallation. Gate-steget väljer
 därför uttryckligen `test_ci_gate.py`. Ett nionde test kör workflowets faktiska
 kommando i en syntetisk mall med en annan testmodul som kräver ännu
 oinstallerade beroenden: utan filväljaren blir resultatet rött, med den grönt.
+
+CodeRabbit/oberoende granskning visade att en positiv kodextensionslista
+fortfarande hoppade över tsconfig, Dockerfile och ESLint-konfiguration.
+Fem konkreta config-/okända filfall reproducerades röda innan filtret gjordes
+fail-closed. Elva kontraktstester är nu gröna; den avgränsade Python-modellen
+ersätter inte verifiering av dornys verkliga picomatch-semantik i Actions.
 
 Separat kvarstående risk: befintliga Python-lint/teststeg sväljer fel med
 `|| true`/fallback. De ändras inte inom denna avgränsade filterfix.
